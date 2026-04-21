@@ -1,27 +1,13 @@
---[[
-    SNAKE HUB 🐍
-    ROBLOX AIMBOT COMPLETO (Camera + Arma ADS)
-    - Keybind PRINCIPAL: R (liga/desliga aimbot)
-    - Sistema de KEY: "Essaeakey" (necessário para ativar)
-    - Mira da câmera (suave)
-    - Mira da arma quando apertar botão direito (ADS)
-    - Identifica automaticamente armas e miras
-    - UI completa com seleção de alvo
-    - ESP com nome, vida e distância
-]]
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
--- ========== SISTEMA DE KEY ==========
-local REQUIRED_KEY = "Essaeakey" -- Key necessária para ativar o hub
+local REQUIRED_KEY = "Essaeakey"
 local keyInserted = false
-local keyInputFrame = nil
+local hubLoaded = false
 
--- ========== CONFIGURAÇÕES ==========
 local settings = {
     AimbotEnabled = true,
     ESPEnabled = true,
@@ -35,157 +21,16 @@ local settings = {
     ShowFOVCircle = true,
     ESPBoxColor = Color3.fromRGB(0, 162, 255),
     ESPTextColor = Color3.fromRGB(255, 255, 255),
-    ADSSensitivity = 0.8,
 }
 
--- Lista de partes do corpo
 local bodyParts = {"Head", "UpperTorso", "LowerTorso", "HumanoidRootPart"}
 
--- ========== VARIÁVEIS ==========
 local currentTarget = nil
 local espObjects = {}
 local fovCircle = nil
 local isAiming = false
 local currentWeapon = nil
-local weaponScope = nil
-local originalMouseBehavior = nil
-local hubLoaded = false
 
--- ========== TELA DE INSERIR KEY ==========
-local function createKeyScreen()
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "SnakeHubKeySystem"
-    screenGui.ResetOnSpawn = false
-    screenGui.Parent = LocalPlayer.PlayerGui
-    
-    -- Fundo escuro
-    local background = Instance.new("Frame")
-    background.Size = UDim2.new(1, 0, 1, 0)
-    background.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    background.BackgroundTransparency = 0.7
-    background.Parent = screenGui
-    
-    -- Frame principal
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Size = UDim2.new(0, 400, 0, 250)
-    mainFrame.Position = UDim2.new(0.5, -200, 0.5, -125)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-    mainFrame.BorderSizePixel = 2
-    mainFrame.BorderColor3 = Color3.fromRGB(0, 162, 255)
-    mainFrame.Parent = background
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = mainFrame
-    
-    -- Título Snake Hub
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 50)
-    title.Position = UDim2.new(0, 0, 0, 10)
-    title.Text = "SNAKE HUB 🐍"
-    title.TextColor3 = Color3.fromRGB(0, 162, 255)
-    title.BackgroundTransparency = 1
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 28
-    title.Parent = mainFrame
-    
-    -- By: Snake
-    local subTitle = Instance.new("TextLabel")
-    subTitle.Size = UDim2.new(1, 0, 0, 30)
-    subTitle.Position = UDim2.new(0, 0, 0, 55)
-    subTitle.Text = "By: Snake"
-    subTitle.TextColor3 = Color3.fromRGB(180, 180, 200)
-    subTitle.BackgroundTransparency = 1
-    subTitle.Font = Enum.Font.Gotham
-    subTitle.TextSize = 16
-    subTitle.Parent = mainFrame
-    
-    -- Texto instrução
-    local instruction = Instance.new("TextLabel")
-    instruction.Size = UDim2.new(1, -40, 0, 30)
-    instruction.Position = UDim2.new(0, 20, 0, 100)
-    instruction.Text = "INSIRA A KEY PARA ATIVAR:"
-    instruction.TextColor3 = Color3.fromRGB(200, 200, 200)
-    instruction.BackgroundTransparency = 1
-    instruction.Font = Enum.Font.Gotham
-    instruction.TextSize = 14
-    instruction.TextXAlignment = Enum.TextXAlignment.Left
-    instruction.Parent = mainFrame
-    
-    -- Campo de texto para key
-    local keyBox = Instance.new("TextBox")
-    keyBox.Size = UDim2.new(1, -40, 0, 40)
-    keyBox.Position = UDim2.new(0, 20, 0, 135)
-    keyBox.PlaceholderText = "Digite a key aqui..."
-    keyBox.Text = ""
-    keyBox.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-    keyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    keyBox.Font = Enum.Font.Gotham
-    keyBox.TextSize = 14
-    keyBox.Parent = mainFrame
-    
-    local keyCorner = Instance.new("UICorner")
-    keyCorner.CornerRadius = UDim.new(0, 5)
-    keyCorner.Parent = keyBox
-    
-    -- Botão confirmar
-    local confirmBtn = Instance.new("TextButton")
-    confirmBtn.Size = UDim2.new(0, 150, 0, 40)
-    confirmBtn.Position = UDim2.new(0.5, -75, 0, 190)
-    confirmBtn.Text = "CONFIRMAR"
-    confirmBtn.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
-    confirmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    confirmBtn.Font = Enum.Font.GothamBold
-    confirmBtn.TextSize = 16
-    confirmBtn.Parent = mainFrame
-    
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 5)
-    btnCorner.Parent = confirmBtn
-    
-    -- Mensagem de erro
-    local errorMsg = Instance.new("TextLabel")
-    errorMsg.Size = UDim2.new(1, -40, 0, 25)
-    errorMsg.Position = UDim2.new(0, 20, 0, 235)
-    errorMsg.Text = ""
-    errorMsg.TextColor3 = Color3.fromRGB(255, 70, 70)
-    errorMsg.BackgroundTransparency = 1
-    errorMsg.Font = Enum.Font.Gotham
-    errorMsg.TextSize = 12
-    errorMsg.Visible = false
-    errorMsg.Parent = mainFrame
-    
-    confirmBtn.MouseButton1Click:Connect(function()
-        if keyBox.Text == REQUIRED_KEY then
-            keyInserted = true
-            screenGui:Destroy()
-            loadHub()
-        else
-            errorMsg.Text = "KEY INCORRETA! Tente novamente."
-            errorMsg.Visible = true
-            keyBox.Text = ""
-            wait(2)
-            errorMsg.Visible = false
-        end
-    end)
-    
-    -- Permitir pressionar Enter
-    keyBox.FocusLost:Connect(function(enterPressed)
-        if enterPressed and keyBox.Text == REQUIRED_KEY then
-            keyInserted = true
-            screenGui:Destroy()
-            loadHub()
-        elseif enterPressed then
-            errorMsg.Text = "KEY INCORRETA! Tente novamente."
-            errorMsg.Visible = true
-            keyBox.Text = ""
-            wait(2)
-            errorMsg.Visible = false
-        end
-    end)
-end
-
--- ========== FUNÇÃO PARA IDENTIFICAR ARMA ATUAL ==========
 local function getCurrentWeapon()
     local character = LocalPlayer.Character
     if not character then return nil end
@@ -237,13 +82,11 @@ local function getCurrentWeapon()
     
     return {
         Tool = tool,
-        WeaponType = nil,
         Scope = scope,
         HasScope = scope ~= nil
     }
 end
 
--- ========== FUNÇÃO PARA OBTER A POSIÇÃO DE MIRA DA ARMA ==========
 local function getWeaponAimPosition()
     if not currentWeapon or not currentWeapon.Tool then return nil end
     
@@ -273,7 +116,6 @@ local function getWeaponAimPosition()
     return aimPosition
 end
 
--- ========== FUNÇÃO PARA ATUALIZAR MIRA DA ARMA ==========
 local function updateWeaponAim()
     if not settings.WeaponAimbotEnabled then return end
     if not isAiming then return end
@@ -291,10 +133,8 @@ local function updateWeaponAim()
     local weaponAimPos = getWeaponAimPosition()
     if not weaponAimPos then return end
     
-    local currentAimPos = weaponAimPos
-    
     local currentWeaponCFrame = currentWeapon.Tool:GetPivot()
-    local targetCFrame = CFrame.lookAt(currentAimPos, targetPart.Position)
+    local targetCFrame = CFrame.lookAt(weaponAimPos, targetPart.Position)
     
     local smoothedCFrame = currentWeaponCFrame:Lerp(targetCFrame, 1 - settings.WeaponSmoothness)
     currentWeapon.Tool:SetPrimaryPartCFrame(smoothedCFrame)
@@ -307,7 +147,6 @@ local function updateWeaponAim()
     end
 end
 
--- ========== DETECÇÃO DE MIRA (BOTÃO DIREITO) ==========
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if not hubLoaded then return end
@@ -315,22 +154,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.UserInputType == Enum.UserInputType.MouseButton2 then
         isAiming = true
         currentWeapon = getCurrentWeapon()
-        
-        if settings.WeaponAimbotEnabled then
-            local screenGui = LocalPlayer.PlayerGui:FindFirstChild("SnakeHubUI")
-            if screenGui then
-                local feedback = Instance.new("TextLabel")
-                feedback.Size = UDim2.new(0, 200, 0, 30)
-                feedback.Position = UDim2.new(0.5, -100, 0.85, 0)
-                feedback.Text = "🔫 MIRA ATIVA" .. (currentWeapon and currentWeapon.HasScope and " (SCOPE)" or "")
-                feedback.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
-                feedback.TextColor3 = Color3.fromRGB(255, 255, 255)
-                feedback.Font = Enum.Font.GothamBold
-                feedback.TextSize = 14
-                feedback.Parent = screenGui
-                game:GetService("Debris"):AddItem(feedback, 1)
-            end
-        end
     end
 end)
 
@@ -340,14 +163,136 @@ UserInputService.InputEnded:Connect(function(input, gameProcessed)
     end
 end)
 
--- ========== FUNÇÕES UI ==========
+local function createKeyScreen()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "SnakeHubKeySystem"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = LocalPlayer.PlayerGui
+    
+    local background = Instance.new("Frame")
+    background.Size = UDim2.new(1, 0, 1, 0)
+    background.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    background.BackgroundTransparency = 0.7
+    background.Parent = screenGui
+    
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Size = UDim2.new(0, 400, 0, 250)
+    mainFrame.Position = UDim2.new(0.5, -200, 0.5, -125)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    mainFrame.BorderSizePixel = 2
+    mainFrame.BorderColor3 = Color3.fromRGB(0, 162, 255)
+    mainFrame.Parent = background
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = mainFrame
+    
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 50)
+    title.Position = UDim2.new(0, 0, 0, 10)
+    title.Text = "SNAKE HUB 🐍"
+    title.TextColor3 = Color3.fromRGB(0, 162, 255)
+    title.BackgroundTransparency = 1
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 28
+    title.Parent = mainFrame
+    
+    local subTitle = Instance.new("TextLabel")
+    subTitle.Size = UDim2.new(1, 0, 0, 30)
+    subTitle.Position = UDim2.new(0, 0, 0, 55)
+    subTitle.Text = "By: Snake"
+    subTitle.TextColor3 = Color3.fromRGB(180, 180, 200)
+    subTitle.BackgroundTransparency = 1
+    subTitle.Font = Enum.Font.Gotham
+    subTitle.TextSize = 16
+    subTitle.Parent = mainFrame
+    
+    local instruction = Instance.new("TextLabel")
+    instruction.Size = UDim2.new(1, -40, 0, 30)
+    instruction.Position = UDim2.new(0, 20, 0, 100)
+    instruction.Text = "INSIRA A KEY PARA ATIVAR:"
+    instruction.TextColor3 = Color3.fromRGB(200, 200, 200)
+    instruction.BackgroundTransparency = 1
+    instruction.Font = Enum.Font.Gotham
+    instruction.TextSize = 14
+    instruction.TextXAlignment = Enum.TextXAlignment.Left
+    instruction.Parent = mainFrame
+    
+    local keyBox = Instance.new("TextBox")
+    keyBox.Size = UDim2.new(1, -40, 0, 40)
+    keyBox.Position = UDim2.new(0, 20, 0, 135)
+    keyBox.PlaceholderText = "Digite a key aqui..."
+    keyBox.Text = ""
+    keyBox.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    keyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    keyBox.Font = Enum.Font.Gotham
+    keyBox.TextSize = 14
+    keyBox.Parent = mainFrame
+    
+    local keyCorner = Instance.new("UICorner")
+    keyCorner.CornerRadius = UDim.new(0, 5)
+    keyCorner.Parent = keyBox
+    
+    local confirmBtn = Instance.new("TextButton")
+    confirmBtn.Size = UDim2.new(0, 150, 0, 40)
+    confirmBtn.Position = UDim2.new(0.5, -75, 0, 190)
+    confirmBtn.Text = "CONFIRMAR"
+    confirmBtn.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+    confirmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    confirmBtn.Font = Enum.Font.GothamBold
+    confirmBtn.TextSize = 16
+    confirmBtn.Parent = mainFrame
+    
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 5)
+    btnCorner.Parent = confirmBtn
+    
+    local errorMsg = Instance.new("TextLabel")
+    errorMsg.Size = UDim2.new(1, -40, 0, 25)
+    errorMsg.Position = UDim2.new(0, 20, 0, 235)
+    errorMsg.Text = ""
+    errorMsg.TextColor3 = Color3.fromRGB(255, 70, 70)
+    errorMsg.BackgroundTransparency = 1
+    errorMsg.Font = Enum.Font.Gotham
+    errorMsg.TextSize = 12
+    errorMsg.Visible = false
+    errorMsg.Parent = mainFrame
+    
+    confirmBtn.MouseButton1Click:Connect(function()
+        if keyBox.Text == REQUIRED_KEY then
+            keyInserted = true
+            screenGui:Destroy()
+            loadHub()
+        else
+            errorMsg.Text = "KEY INCORRETA! Tente novamente."
+            errorMsg.Visible = true
+            keyBox.Text = ""
+            wait(2)
+            errorMsg.Visible = false
+        end
+    end)
+    
+    keyBox.FocusLost:Connect(function(enterPressed)
+        if enterPressed and keyBox.Text == REQUIRED_KEY then
+            keyInserted = true
+            screenGui:Destroy()
+            loadHub()
+        elseif enterPressed then
+            errorMsg.Text = "KEY INCORRETA! Tente novamente."
+            errorMsg.Visible = true
+            keyBox.Text = ""
+            wait(2)
+            errorMsg.Visible = false
+        end
+    end)
+end
+
 local function createUI()
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "SnakeHubUI"
     screenGui.ResetOnSpawn = false
     screenGui.Parent = LocalPlayer.PlayerGui
     
-    -- Frame principal
     local mainFrame = Instance.new("Frame")
     mainFrame.Size = UDim2.new(0, 320, 0, 480)
     mainFrame.Position = UDim2.new(0, 10, 0, 10)
@@ -361,7 +306,6 @@ local function createUI()
     mainCorner.CornerRadius = UDim.new(0, 8)
     mainCorner.Parent = mainFrame
     
-    -- Título Snake Hub
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(1, 0, 0, 45)
     title.Position = UDim2.new(0, 0, 0, 0)
@@ -372,7 +316,6 @@ local function createUI()
     title.TextSize = 20
     title.Parent = mainFrame
     
-    -- By: Snake
     local subTitle = Instance.new("TextLabel")
     subTitle.Size = UDim2.new(1, 0, 0, 20)
     subTitle.Position = UDim2.new(0, 0, 0, 38)
@@ -383,7 +326,6 @@ local function createUI()
     subTitle.TextSize = 12
     subTitle.Parent = mainFrame
     
-    -- Status Aimbot
     local aimbotStatus = Instance.new("TextLabel")
     aimbotStatus.Size = UDim2.new(1, -20, 0, 30)
     aimbotStatus.Position = UDim2.new(0, 10, 0, 65)
@@ -395,7 +337,6 @@ local function createUI()
     aimbotStatus.TextXAlignment = Enum.TextXAlignment.Left
     aimbotStatus.Parent = mainFrame
     
-    -- Toggle Aimbot (R)
     local toggleBtn = Instance.new("TextButton")
     toggleBtn.Size = UDim2.new(0, 80, 0, 30)
     toggleBtn.Position = UDim2.new(1, -90, 0, 65)
@@ -416,7 +357,6 @@ local function createUI()
         aimbotStatus.TextColor3 = settings.AimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     end)
     
-    -- Status Weapon Aimbot
     local weaponStatus = Instance.new("TextLabel")
     weaponStatus.Size = UDim2.new(1, -20, 0, 25)
     weaponStatus.Position = UDim2.new(0, 10, 0, 100)
@@ -444,14 +384,12 @@ local function createUI()
         weaponStatus.TextColor3 = settings.WeaponAimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
     end)
     
-    -- Separador
     local sep = Instance.new("Frame")
     sep.Size = UDim2.new(1, -20, 0, 1)
     sep.Position = UDim2.new(0, 10, 0, 132)
     sep.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
     sep.Parent = mainFrame
     
-    -- Dropdown parte do corpo
     local partLabel = Instance.new("TextLabel")
     partLabel.Size = UDim2.new(1, -20, 0, 25)
     partLabel.Position = UDim2.new(0, 10, 0, 142)
@@ -513,7 +451,6 @@ local function createUI()
         dropdownOpen = true
     end)
     
-    -- Modo de alvo
     local modeLabel = Instance.new("TextLabel")
     modeLabel.Size = UDim2.new(1, -20, 0, 25)
     modeLabel.Position = UDim2.new(0, 10, 0, 177)
@@ -544,7 +481,6 @@ local function createUI()
         end
     end)
     
-    -- Lista de jogadores
     local playerListFrame = Instance.new("ScrollingFrame")
     playerListFrame.Size = UDim2.new(1, -20, 0, 100)
     playerListFrame.Position = UDim2.new(0, 10, 0, 212)
@@ -592,7 +528,6 @@ local function createUI()
     Players.PlayerAdded:Connect(updatePlayerList)
     Players.PlayerRemoving:Connect(updatePlayerList)
     
-    -- Sliders
     local smoothLabel = Instance.new("TextLabel")
     smoothLabel.Size = UDim2.new(1, -20, 0, 20)
     smoothLabel.Position = UDim2.new(0, 10, 0, 322)
@@ -659,7 +594,6 @@ local function createUI()
         end
     end)
     
-    -- FOV slider
     local fovLabel = Instance.new("TextLabel")
     fovLabel.Size = UDim2.new(1, -20, 0, 20)
     fovLabel.Position = UDim2.new(0, 10, 0, 378)
@@ -694,7 +628,6 @@ local function createUI()
         end
     end)
     
-    -- Toggle FOV
     local fovCircleBtn = Instance.new("TextButton")
     fovCircleBtn.Size = UDim2.new(0, 100, 0, 25)
     fovCircleBtn.Position = UDim2.new(0, 10, 0, 408)
@@ -711,7 +644,6 @@ local function createUI()
         updateFOVCircle()
     end)
     
-    -- Toggle ESP
     local espBtn = Instance.new("TextButton")
     espBtn.Size = UDim2.new(0, 100, 0, 25)
     espBtn.Position = UDim2.new(1, -110, 0, 408)
@@ -730,7 +662,6 @@ local function createUI()
         end
     end)
     
-    -- Botão fechar
     local closeBtn = Instance.new("TextButton")
     closeBtn.Size = UDim2.new(0, 60, 0, 25)
     closeBtn.Position = UDim2.new(1, -70, 1, -30)
@@ -745,7 +676,6 @@ local function createUI()
         mainFrame.Visible = false
     end)
     
-    -- Botão abrir
     local openBtn = Instance.new("TextButton")
     openBtn.Size = UDim2.new(0, 40, 0, 40)
     openBtn.Position = UDim2.new(0, 10, 1, -50)
@@ -767,7 +697,6 @@ local function createUI()
     return screenGui
 end
 
--- ========== FOV CIRCLE ==========
 local function updateFOVCircle()
     if fovCircle then fovCircle:Destroy() end
     if not settings.ShowFOVCircle or settings.FOVRadius <= 0 then return end
@@ -788,7 +717,6 @@ local function updateFOVCircle()
     fovCircle = circle
 end
 
--- ========== ESP ==========
 local function createESP(player)
     if espObjects[player] then return end
     
@@ -909,7 +837,6 @@ local function clearESP()
     espObjects = {}
 end
 
--- ========== FUNÇÕES PRINCIPAIS ==========
 local function getTargetPart(character)
     if not character then return nil end
     local part = character:FindFirstChild(settings.TargetPart)
@@ -958,7 +885,6 @@ local function getBestTarget()
     return bestPlayer
 end
 
--- Aimbot da câmera
 local function updateCameraAimbot()
     if not settings.AimbotEnabled then return end
     
@@ -980,12 +906,10 @@ local function updateCameraAimbot()
     camera.CFrame = smoothedCFrame
 end
 
--- ========== KEYBIND R (PRINCIPAL) ==========
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if not hubLoaded then return end
     
-    -- Tecla R para ligar/desligar aimbot
     if input.KeyCode == Enum.KeyCode.R then
         settings.AimbotEnabled = not settings.AimbotEnabled
         
@@ -1001,28 +925,14 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                 end
             end
         end
-        
-        -- Feedback visual
-        local feedback = Instance.new("TextLabel")
-        feedback.Size = UDim2.new(0, 200, 0, 30)
-        feedback.Position = UDim2.new(0.5, -100, 0.7, 0)
-        feedback.Text = settings.AimbotEnabled and "⚡ AIMBOT ATIVADO" or "❌ AIMBOT DESATIVADO"
-        feedback.BackgroundColor3 = settings.AimbotEnabled and Color3.fromRGB(0, 162, 255) or Color3.fromRGB(200, 50, 50)
-        feedback.TextColor3 = Color3.fromRGB(255, 255, 255)
-        feedback.Font = Enum.Font.GothamBold
-        feedback.TextSize = 14
-        feedback.Parent = screenGui or LocalPlayer.PlayerGui
-        game:GetService("Debris"):AddItem(feedback, 1.5)
     end
 end)
 
--- ========== CARREGAR HUB ==========
 function loadHub()
     createUI()
     updateFOVCircle()
     hubLoaded = true
     
-    -- Loop principal
     RunService.RenderStepped:Connect(function()
         if not hubLoaded then return end
         updateCameraAimbot()
@@ -1040,7 +950,6 @@ function loadHub()
         end
     end)
     
-    -- Atualiza lista de jogadores
     local function updateFullPlayerList()
         if not hubLoaded then return end
         local screenGui = LocalPlayer.PlayerGui:FindFirstChild("SnakeHubUI")
@@ -1095,13 +1004,6 @@ function loadHub()
             espObjects[player] = nil
         end
     end)
-    
-    print("✅ Snake Hub 🐍 Carregado com sucesso!")
-    print("📌 KEY: Essaeakey - Verificada com sucesso!")
-    print("📌 Pressione R para ligar/desligar o aimbot")
-    print("📌 Clique direito para mirar com a arma")
-    print("📌 Modo Manual: clique em um jogador na lista da UI")
 end
 
--- ========== INICIAR SISTEMA DE KEY ==========
 createKeyScreen()
